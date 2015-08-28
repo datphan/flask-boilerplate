@@ -127,6 +127,44 @@ def add_filters(query, op_sequence, accepted_keys):
     return query
 
 
+
+
+def parse_number(s):
+    try:
+        return float(s)
+    except ValueError:
+        return int(s) if s.isdigit() else s
+
+
+
+def extract_filters(arg):
+    """Make filter list from filter string
+    :param arg could be like:
+                        {
+                            email: '',
+                            filters: 'a,lt,1;b,ge,2;c,eq,3'
+                        }
+    :return filter list
+    """
+
+    filters = arg.get('filters')
+    filter_list = list()
+
+    if filters is None:
+        return None
+
+    for item in filters.split(';'):
+        flter = item.split(',');
+        if len(flter) > 2:
+            filter_list.append({
+                    'key': flter[0],
+                    'op': flter[1],
+                    'value': parse_number(flter[2])
+                })
+
+    return filter_list
+
+
 # thanks to http://stackoverflow.com/questions/8100166/inheriting-methods-docstrings-in-python
 def fix_docs(cls):
     for name, func in vars(cls).items():

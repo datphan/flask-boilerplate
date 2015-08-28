@@ -6,8 +6,10 @@ from webargs.flaskparser import use_args
 
 from ..auth import admin_role_permission, user_permission
 from ..api import (Resource, marshal_with, marshal_with_data_envelope, token_auth_required, one_of,
-                   anonymous_required, permissions_required, validators, paginated, extract_filters)
+                   anonymous_required, permissions_required, validators, paginated, extract_args)
+
 from ..api.args import BoolArg
+
 from ..extensions import auth_datastore
 from ..exceptions import UnauthorizedException
 
@@ -20,6 +22,7 @@ _role_list_schema = RoleListSchema()
 
 
 search_args = {
+    'filters': Arg(str),
     'email': Arg(str, validate=validators.Email()),
     'active': BoolArg
 }
@@ -46,10 +49,8 @@ class UserResource(Resource):
     @permissions_required(admin_role_permission)
     @marshal_with(_user_list_schema)
     @paginated
-    @use_args(search_args)  # TODO(hoate): add support for @extract_args to avoid boilerplate
+    @extract_args(search_args)
     def index(self, args):
-        filters, args = extract_filters(args)
-        args['filters'] = filters
         return auth_datastore.find_users(**args), args
 
 
@@ -63,7 +64,7 @@ class UserResource(Resource):
     @route('', methods=['POST'])
     @one_of(anonymous_required, permissions_required(admin_role_permission))
     @marshal_with_data_envelope(_user_schema)
-    @use_args(user_args)
+    @extract_args(user_args)
     def create(self, args):
         user = auth_datastore.create_user(**args)
         location = url_for('.users:show', _external=True, **{'id': user.id})
@@ -73,7 +74,7 @@ class UserResource(Resource):
 
     @route('<id>', methods=['PUT'])
     @marshal_with_data_envelope(_user_schema)
-    @use_args({
+    @extract_args({
         'email': Arg(str, validate=validators.Email()),
         'active': Arg(bool)
     })
